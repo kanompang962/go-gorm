@@ -15,15 +15,25 @@ type Book struct {
 	Price       uint
 }
 
-func CreateBook(db *gorm.DB, book *Book) {
+func createBook(db *gorm.DB, book *Book) error {
 	result := db.Create(book)
 	if result.Error != nil {
-		log.Fatalf("Error creating book: %v", result.Error)
+		return result.Error
 	}
-	fmt.Println("Book created successfully")
+
+	return nil
 }
 
-func GetBook(db *gorm.DB, id uint) *Book {
+func getBooks(db *gorm.DB) []Book {
+	var books []Book
+	result := db.Find(&books)
+	if result.Error != nil {
+		log.Fatalf("Error finding book: %v", result.Error)
+	}
+	return books
+}
+
+func getBook(db *gorm.DB, id int) *Book {
 	var book Book
 	result := db.First(&book, id)
 	if result.Error != nil {
@@ -32,23 +42,26 @@ func GetBook(db *gorm.DB, id uint) *Book {
 	return &book
 }
 
-func UpdateBook(db *gorm.DB, book *Book) {
-	result := db.Save(book)
+func updateBook(db *gorm.DB, book *Book) error {
+	result := db.Model(&book).Updates(book)
 	if result.Error != nil {
-		log.Fatalf("Error updating book: %v", result.Error)
+		return result.Error
 	}
-	fmt.Println("Book updated successfully")
+
+	return nil
 }
 
-func DeleteBook(db *gorm.DB, id uint) {
+func deleteBook(db *gorm.DB, id int) error {
 	var book Book
 	result := db.Delete(&book, id)
 	if result.Error != nil {
-		log.Fatalf("Error deleting book: %v", result.Error)
+		return result.Error
 	}
-	fmt.Println("Book deleted successfully")
+
+	return nil
 }
-func DeleteBook_unscope(db *gorm.DB, id uint) {
+
+func deleteBook_unscope(db *gorm.DB, id uint) {
 	var book Book
 	result := db.Unscoped().Delete(&book, id)
 	if result.Error != nil {

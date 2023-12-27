@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -41,8 +43,83 @@ func main() {
 	if err != nil {
 		panic("failed to connect to database")
 	}
+
 	db.AutoMigrate(&Book{})
 	fmt.Println("Database migration completed!")
+
+	// Setup Fiber
+	app := fiber.New()
+
+	// CRUD routes
+	// select all
+	app.Get("/books", func(c *fiber.Ctx) error {
+		return c.JSON(getBooks(db))
+	})
+
+	// select id
+	app.Get("/book/:id", func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		book := getBook(db, id)
+		return c.JSON(book)
+	})
+
+	// create
+	app.Post("/book", func(c *fiber.Ctx) error {
+		book := new(Book)
+		err := c.BodyParser(book)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		err2 := createBook(db, book)
+		if err2 != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		return c.JSON(fiber.Map{
+			"message": "success",
+		})
+	})
+
+	// update
+	app.Put("/book/:id", func(c *fiber.Ctx) error {
+		id, err1 := strconv.Atoi(c.Params("id"))
+		if err1 != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		book := new(Book)
+		err2 := c.BodyParser(book)
+		if err2 != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		book.ID = uint(id)
+		err3 := updateBook(db, book)
+		if err3 != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		return c.JSON(fiber.Map{
+			"message": "success",
+		})
+	})
+
+	// delete
+	app.Delete("/book/:id", func(c *fiber.Ctx) error {
+		id, err1 := strconv.Atoi(c.Params("id"))
+		if err1 != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		err3 := deleteBook(db, id)
+		if err3 != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		return c.JSON(fiber.Map{
+			"message": "success",
+		})
+	})
+
+	app.Listen(":8080")
 
 	// insert data
 	// newBook := Book{
@@ -65,5 +142,5 @@ func main() {
 	// DeleteBook(db, book.ID)
 
 	// delete data (delete)
-	DeleteBook_unscope(db, 1)
+	// DeleteBook_unscope(db, 1)
 }
